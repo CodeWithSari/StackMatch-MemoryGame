@@ -365,14 +365,22 @@ function GameBoard() {
         >
           <EmojiEventsIcon color="warning" /> Match all pairs to win the level.
         </Typography>
-
-        <Typography
-          variant="body1"
-          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-        >
-          <TimerIcon color="primary" /> <ScoreboardIcon color="secondary" /> Your time, moves,
-          and score will be recorded in the <b>Leaderboard</b>.
-        </Typography>
+<Typography
+  variant="body1"
+  sx={{
+    display: "flex",
+    alignItems: "center",
+    gap: 1,
+    textAlign: {
+      xs: "justify",
+      sm: "center", 
+    },
+    flexWrap: "wrap",
+  }}
+>
+  <TimerIcon color="primary" /> <ScoreboardIcon color="secondary" /> Your time, moves,
+  and score will be recorded in the <b>Leaderboard</b>.
+</Typography>
       </Box>
 
       {/* Name Input Modal */}
