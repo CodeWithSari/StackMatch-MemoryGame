@@ -24,11 +24,12 @@ import {
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
 
+// Sounds
 import flipSoundFile from "../assets/sounds/flip.mp3";
 import matchSoundFile from "../assets/sounds/match.mp3";
 import winSoundFile from "../assets/sounds/win.mp3";
 
-//  MUI Icons
+// MUI Icons
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import SportsScoreIcon from "@mui/icons-material/SportsScore";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
@@ -73,6 +74,7 @@ function GameBoard() {
     }
   );
   const [unlockedLevels, setUnlockedLevels] = useState(["Easy"]);
+  const [finalStats, setFinalStats] = useState({ moves: 0, time: 0, score: 0 });
 
   const flipSound = useRef(new Audio(flipSoundFile));
   const matchSound = useRef(new Audio(matchSoundFile));
@@ -100,14 +102,17 @@ function GameBoard() {
     setIsGameActive(false);
   };
 
+  // Start game on level change
   useEffect(() => startNewGame(), [level]);
 
+  // Timer
   useEffect(() => {
     if (!isGameActive) return;
     const timer = setInterval(() => setTime((t) => t + 1), 1000);
     return () => clearInterval(timer);
   }, [isGameActive]);
 
+  // Handle card flips
   useEffect(() => {
     if (flipped.length === 2) {
       setMoves((m) => m + 1);
@@ -126,32 +131,37 @@ function GameBoard() {
     }
   }, [flipped]);
 
- useEffect(() => {
-  if (matched.length && matched.length === cards.length) {
-    setIsGameActive(false);
-    if (!showConfetti) {
-      setShowConfetti(true);
-      winSound.current.play();
+  // Win condition
+  useEffect(() => {
+    if (matched.length && matched.length === cards.length) {
+      setIsGameActive(false);
+
+      if (!showConfetti) {
+        setShowConfetti(true);
+        winSound.current.play();
+      }
+
+      const finalMoves = moves;
+      const finalTime = time;
+      const score = Math.max(0, 1000 - finalMoves * 10 - finalTime);
+
+      setFinalStats({ moves: finalMoves, time: finalTime, score });
+
+      if (score > highScores[level]) {
+        setModalOpen(true);
+      }
+
+      // Unlock next level
+      if (level === "Easy" && !unlockedLevels.includes("Medium"))
+        setUnlockedLevels([...unlockedLevels, "Medium"]);
+      if (level === "Medium" && !unlockedLevels.includes("Hard"))
+        setUnlockedLevels([...unlockedLevels, "Hard"]);
+
+      setTimeout(() => startNewGame(), 4000);
     }
+  }, [matched]);
 
-    const score = Math.max(0, 1000 - moves * 10 - time);
-    if (score > highScores[level]) {
-      setModalOpen(true);
-    }
-
-    // Unlock next level
-    if (level === "Easy" && !unlockedLevels.includes("Medium"))
-      setUnlockedLevels([...unlockedLevels, "Medium"]);
-    if (level === "Medium" && !unlockedLevels.includes("Hard"))
-      setUnlockedLevels([...unlockedLevels, "Hard"]);
-
-    // Auto reset cards to starting face after 4 seconds
-    setTimeout(() => {
-      startNewGame();
-    }, 4000);
-  }
-}, [matched]);
-
+  // Confetti auto-hide
   useEffect(() => {
     if (showConfetti) {
       const timer = setTimeout(() => setShowConfetti(false), 5000);
@@ -174,14 +184,22 @@ function GameBoard() {
   };
 
   const saveScore = (playerName) => {
-    const score = Math.max(0, 1000 - moves * 10 - time);
+    const { moves: finalMoves, time: finalTime, score } = finalStats;
+
     const leaderboard =
       JSON.parse(localStorage.getItem("stackMatchLeaderboard")) || {
         Easy: [],
         Medium: [],
         Hard: [],
       };
-    leaderboard[level].push({ name: playerName, score, moves, time });
+
+    leaderboard[level].push({
+      name: playerName,
+      score,
+      moves: finalMoves,
+      time: finalTime,
+    });
+
     leaderboard[level] = leaderboard[level]
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
@@ -190,7 +208,11 @@ function GameBoard() {
 
     const updatedHighScores = { ...highScores, [level]: score };
     setHighScores(updatedHighScores);
-    localStorage.setItem("stackMatchHighScore", JSON.stringify(updatedHighScores));
+    localStorage.setItem(
+      "stackMatchHighScore",
+      JSON.stringify(updatedHighScores)
+    );
+
     setModalOpen(false);
   };
 
@@ -214,10 +236,7 @@ function GameBoard() {
           minWidth: 150,
           bgcolor: "rgba(255,255,255,0.1)",
           borderRadius: 2,
-          "& .MuiOutlinedInput-root": {
-            color: "#fff",
-            boxShadow: "0 0 8px #00e5ff",
-          },
+          "& .MuiOutlinedInput-root": { color: "#fff", boxShadow: "0 0 8px #00e5ff" },
           "& .MuiInputLabel-root": { color: "#8aedfa" },
         }}
       >
@@ -341,8 +360,7 @@ function GameBoard() {
         </Typography>
 
         <Typography variant="body1" sx={{ mb: 1 }}>
-          🎯 Select your difficulty level (<b>Easy / Medium / Hard</b>).
-          Initially, only <b>Easy</b> level is unlocked.
+          🎯 Select your difficulty level (<b>Easy / Medium / Hard</b>). Initially, only <b>Easy</b> is unlocked.
         </Typography>
 
         <Typography
@@ -365,22 +383,20 @@ function GameBoard() {
         >
           <EmojiEventsIcon color="warning" /> Match all pairs to win the level.
         </Typography>
-<Typography
-  variant="body1"
-  sx={{
-    display: "flex",
-    alignItems: "center",
-    gap: 1,
-    textAlign: {
-      xs: "justify",
-      sm: "center", 
-    },
-    flexWrap: "wrap",
-  }}
->
-  <TimerIcon color="primary" /> <ScoreboardIcon color="secondary" /> Your time, moves,
-  and score will be recorded in the <b>Leaderboard</b>.
-</Typography>
+
+        <Typography
+          variant="body1"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            textAlign: { xs: "justify", sm: "center" },
+            flexWrap: "wrap",
+          }}
+        >
+          <TimerIcon color="primary" /> <ScoreboardIcon color="secondary" /> Your time, moves,
+          and score will be recorded in the <b>Leaderboard</b>.
+        </Typography>
       </Box>
 
       {/* Name Input Modal */}

@@ -18,9 +18,25 @@ function Leaderboard() {
   const [level, setLevel] = useState("Easy");
   const [scores, setScores] = useState([]);
 
-  useEffect(() => {
+  // Load scores from localStorage
+  const loadScores = () => {
     const storedScores = JSON.parse(localStorage.getItem("stackMatchLeaderboard")) || {};
     setScores(storedScores[level] || []);
+  };
+
+  // Load scores on component mount and when level changes
+  useEffect(() => {
+    loadScores();
+  }, [level]);
+
+  // Listen to custom storage update events from GameBoard
+  useEffect(() => {
+    const handleLeaderboardUpdate = () => {
+      loadScores();
+    };
+
+    window.addEventListener("leaderboardUpdated", handleLeaderboardUpdate);
+    return () => window.removeEventListener("leaderboardUpdated", handleLeaderboardUpdate);
   }, [level]);
 
   return (
@@ -35,7 +51,6 @@ function Leaderboard() {
         color: "#fff",
       }}
     >
-      {/* Title */}
       <Typography
         variant="h4"
         align="center"
@@ -45,10 +60,9 @@ function Leaderboard() {
           textShadow: "0px 0px 12px rgba(0, 255, 255, 0.7)",
         }}
       >
-        🏆 LeaderBoard
+        🏆 Leaderboard
       </Typography>
 
-      {/* Level Dropdown */}
       <FormControl
         sx={{
           mb: 3,
@@ -74,7 +88,6 @@ function Leaderboard() {
         </Select>
       </FormControl>
 
-      {/* Table */}
       <Paper
         sx={{
           maxWidth: 700,
@@ -103,9 +116,7 @@ function Leaderboard() {
                 .map((player, i) => (
                   <TableRow
                     key={i}
-                    sx={{
-                      "&:hover": { bgcolor: "rgba(0,255,255,0.1)" },
-                    }}
+                    sx={{ "&:hover": { bgcolor: "rgba(0,255,255,0.1)" } }}
                   >
                     <TableCell sx={{ color: "#fff" }}>{i + 1}</TableCell>
                     <TableCell sx={{ color: "#fff" }}>{player.name}</TableCell>
